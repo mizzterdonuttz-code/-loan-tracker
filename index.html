@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ตรวจสอบยอดหนี้เงินกู้ออมทรัพย์</title>
+<meta name="theme-color" content="#1f5fd6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f9; --surface:#ffffff; --surface-2:#eef1f6; --line:#dde3ec;
+  --text:#14202e; --muted:#61708a; --faint:#8a97ab;
+  --accent:#1f5fd6; --accent-soft:#e3ecfd;
+  --ok:#0f8a5f; --ok-soft:#ddf3e9;
+  --warn:#b8761a; --warn-soft:#fdf0d9;
+  --danger:#c53232;
+  --shadow:0 1px 2px rgba(20,32,46,.06), 0 6px 18px rgba(20,32,46,.06);
+  --radius:14px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e1319; --surface:#161d26; --surface-2:#1d2631; --line:#28323f;
+  --text:#e7edf5; --muted:#93a2b8; --faint:#6d7d93;
+  --accent:#6ea2ff; --accent-soft:#1b2c4a;
+  --ok:#4cc38a; --ok-soft:#17352a; --warn:#e0a94a; --warn-soft:#382c15; --danger:#f07171;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --bg:#0e1319; --surface:#161d26; --surface-2:#1d2631; --line:#28323f;
+  --text:#e7edf5; --muted:#93a2b8; --faint:#6d7d93;
+  --accent:#6ea2ff; --accent-soft:#1b2c4a;
+  --ok:#4cc38a; --ok-soft:#17352a; --warn:#e0a94a; --warn-soft:#382c15; --danger:#f07171;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg); color:var(--text);
+  font-family:"Noto Sans Thai","Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:15px; line-height:1.55; -webkit-text-size-adjust:100%}
+.num{font-family:"IBM Plex Mono","SF Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+.wrap{max-width:820px; margin:0 auto; padding:18px 14px 56px}
+.hidden{display:none !important}
+
+header{display:flex; align-items:center; gap:10px; margin-bottom:14px}
+.brand h1{font-size:1.16rem; margin:0; font-weight:700; letter-spacing:-.01em}
+.brand p{margin:1px 0 0; font-size:.78rem; color:var(--muted)}
+.hdr-actions{margin-left:auto; display:flex; gap:7px}
+button.icon{background:var(--surface); color:var(--text); border:1px solid var(--line);
+  border-radius:10px; padding:8px 11px; font:inherit; font-size:.84rem; cursor:pointer;
+  display:inline-flex; align-items:center; gap:6px; box-shadow:var(--shadow)}
+button.icon:active{transform:translateY(1px)}
+button.icon.primary{background:var(--accent); color:#fff; border-color:transparent}
+
+.status{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:.76rem; color:var(--muted); margin-bottom:14px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
+.dot.live{background:var(--ok)} .dot.cache{background:var(--warn)}
+.status a{color:var(--accent)}
+.notice{background:var(--warn-soft); color:var(--warn); border-radius:11px; padding:10px 13px;
+  font-size:.79rem; margin-bottom:14px; line-height:1.5}
+
+/* ---------- หน้าค้นหา ---------- */
+.searchbar{position:relative; margin-bottom:12px}
+.searchbar input{width:100%; padding:14px 14px 14px 42px; font:inherit; font-size:1rem;
+  background:var(--surface); color:var(--text); border:1px solid var(--line);
+  border-radius:12px; box-shadow:var(--shadow)}
+.searchbar input:focus{outline:2px solid var(--accent-soft); border-color:var(--accent)}
+.searchbar svg{position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--faint)}
+.hint{font-size:.78rem; color:var(--muted); margin:0 2px 12px}
+
+.names{display:grid; gap:8px}
+.nameitem{display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+  background:var(--surface); border:1px solid var(--line); border-radius:12px;
+  padding:12px 14px; font:inherit; color:var(--text); cursor:pointer; box-shadow:var(--shadow)}
+.nameitem:active{transform:translateY(1px)}
+.nameitem .t{min-width:0; flex:1}
+.nameitem .t b{display:block; font-weight:600; font-size:.98rem; overflow-wrap:anywhere}
+.nameitem .chev{flex:none; color:var(--faint)}
+
+.msg{background:var(--surface); border:1px dashed var(--line); border-radius:var(--radius);
+  padding:26px 18px; text-align:center; color:var(--muted); font-size:.9rem}
+
+/* ---------- หน้ารายบุคคล ---------- */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:16px; box-shadow:var(--shadow); margin-bottom:12px}
+.card-top{display:flex; align-items:flex-start; gap:10px; margin-bottom:14px}
+.who{min-width:0; flex:1}
+.who .name{font-weight:700; font-size:1.14rem; letter-spacing:-.01em; overflow-wrap:anywhere}
+.who .sub{font-size:.79rem; color:var(--muted); margin-top:2px}
+.badge{flex:none; font-size:.74rem; font-weight:600; padding:5px 10px; border-radius:99px;
+  background:var(--accent-soft); color:var(--accent); white-space:nowrap}
+.badge.done{background:var(--ok-soft); color:var(--ok)}
+.badge.near{background:var(--warn-soft); color:var(--warn)}
+
+.bar{height:10px; background:var(--surface-2); border-radius:99px; overflow:hidden; margin-bottom:6px}
+.bar span{display:block; height:100%; background:var(--accent); border-radius:99px; transition:width .6s ease}
+.bar span.done{background:var(--ok)}
+.barinfo{display:flex; justify-content:space-between; font-size:.77rem; color:var(--muted); margin-bottom:15px}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:12px}
+.cell .k{font-size:.73rem; color:var(--muted); margin-bottom:1px}
+.cell .v{font-size:1rem; font-weight:600; letter-spacing:-.01em}
+.cell.big .v{font-size:1.28rem}
+.cell.remain .v{color:var(--danger)}
+.cell.remain.zero .v{color:var(--ok)}
+
+.sect-title{font-size:.84rem; font-weight:600; color:var(--muted); margin:18px 2px 8px}
+table{width:100%; border-collapse:collapse; font-size:.85rem}
+th,td{padding:8px 6px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap}
+th{font-size:.72rem; color:var(--muted); font-weight:600; text-align:right}
+th:first-child,td:first-child{text-align:left}
+th:nth-child(2),td:nth-child(2){text-align:left}
+tr.paid td{color:var(--faint)}
+tr.next td{background:var(--accent-soft); font-weight:600}
+tr.next td:first-child{border-radius:7px 0 0 7px}
+tr.next td:last-child{border-radius:0 7px 7px 0}
+.tablewrap{overflow-x:auto; -webkit-overflow-scrolling:touch}
+.tag{font-size:.68rem; padding:1px 6px; border-radius:99px; background:var(--ok-soft); color:var(--ok); font-weight:600}
+
+footer.pagefoot{margin-top:26px; text-align:center; font-size:.73rem; color:var(--faint)}
+@media (max-width:420px){ .wrap{padding:14px 11px 46px} }
+@media print{ .hdr-actions,.searchbar,.status,#viewSearch{display:none} .card{box-shadow:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <button class="icon hidden" id="backBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      กลับ
+    </button>
+    <div class="brand">
+      <h1>ตรวจสอบยอดหนี้เงินกู้</h1>
+      <p>เงินกู้ออมทรัพย์ • ค้นหารายบุคคล</p>
+    </div>
+    <div class="hdr-actions">
+      <button class="icon" id="themeBtn" title="สลับธีม">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+      <button class="icon" id="reloadBtn" title="รีเฟรช">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="status">
+    <span class="dot" id="dot"></span>
+    <span id="statusText">กำลังโหลดข้อมูล…</span>
+  </div>
+  <div id="notice"></div>
+
+  <!-- หน้าค้นหา -->
+  <section id="viewSearch">
+    <div class="searchbar">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+      <input id="search" type="search" placeholder="พิมพ์ชื่อ หรือ ยศ…" autocomplete="off" enterkeyhint="search">
+    </div>
+    <p class="hint" id="hint">พิมพ์ชื่อของท่านเพื่อตรวจสอบยอดหนี้</p>
+    <div class="names" id="names"></div>
+  </section>
+
+  <!-- หน้ารายบุคคล -->
+  <section id="viewDetail" class="hidden"></section>
+
+  <footer class="pagefoot">ข้อมูลจาก Google Sheet “กู้ออมทรัพย์”</footer>
+</div>
+
+<script>
+/* ===== ตั้งค่า ===== */
+const SHEET_ID = "1KJt20eXbjXpfZQcjFWXGVoBngEY2Zwf4OHaYKHhenXQ";
+const SHEET_NAME = "";               // เว้นว่าง = ชีตแรก, หรือใส่ชื่อชีต เช่น "ชีต1"
+const GVIZ = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:json"
+           + (SHEET_NAME ? "&sheet=" + encodeURIComponent(SHEET_NAME) : "");
+
+/* ข้อมูลสำรอง ใช้เมื่อดึงจากชีตไม่สำเร็จ */
+const SNAPSHOT = { at:"17/9/2026", rows:[
+  { no:1, name:"จ.ส.อ. สันติ สีแดงบุตร", startRaw:"2025-12-09", periods:9, amount:50000, perMonth:2780, remain:24980 }
+]};
+
+const TM  = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const TMF = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+const money  = n => (n==null||isNaN(n)) ? "—" : Number(n).toLocaleString("th-TH",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money0 = n => (n==null||isNaN(n)) ? "—" : Math.round(Number(n)).toLocaleString("th-TH");
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+
+function toNum(v){ if(v==null||v==="")return null; if(typeof v==="number")return v;
+  const n=parseFloat(String(v).replace(/[,\s฿]/g,"")); return isNaN(n)?null:n; }
+function normYear(y){ return y>2400 ? y-543 : y; }
+function toDate(v){
+  if(v instanceof Date) return v;
+  if(v==null||v==="") return null;
+  const s=String(v).trim();
+  let m=s.match(/^Date\((\d+),(\d+),(\d+)/);            if(m) return new Date(+m[1],+m[2],+m[3]);
+  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);            if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})\s*([^\s\d]+)\s*(\d{4})$/);
+  if(m){ const a=TM.findIndex(x=>x.replace(/\./g,"")===m[2].replace(/\./g,"")); const i=a>=0?a:TMF.indexOf(m[2]);
+         if(i>=0) return new Date(normYear(+m[3]),i,+m[1]); }
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);          if(m) return new Date(normYear(+m[3]),+m[2]-1,+m[1]);
+  const d=new Date(s); return isNaN(d.getTime())?null:d;
+}
+function fmtThai(d,full){ if(!d)return "—";
+  return d.getDate()+" "+(full?TMF:TM)[d.getMonth()]+" "+(d.getFullYear()+543); }
+function fmtShort(d){ if(!d)return "—"; return TM[d.getMonth()]+" "+String((d.getFullYear()+543)).slice(-2); }
+function addMonths(d,n){ const x=new Date(d.getTime()); const day=x.getDate();
+  x.setDate(1); x.setMonth(x.getMonth()+n);
+  x.setDate(Math.min(day,new Date(x.getFullYear(),x.getMonth()+1,0).getDate())); return x; }
+
+/* ===== อ่านชีต ===== */
+function parseGviz(text){
+  const s=text.indexOf("{"), e=text.lastIndexOf("}");
+  if(s<0) throw new Error("bad gviz");
+  const j=JSON.parse(text.slice(s,e+1));
+  const cols=j.table.cols.map(c=>(c.label||"").trim());
+  return j.table.rows.map(r=>{ const c=r.c||[], o={};
+    cols.forEach((lb,i)=>{ const cc=c[i]; o[lb||("col"+i)] = cc ? (cc.v!=null?cc.v:cc.f) : null; });
+    return o; });
+}
+function pick(o,names){ for(const n of names) for(const k of Object.keys(o))
+  if(k.replace(/\s/g,"")===n.replace(/\s/g,"")) return o[k]; return null; }
+
+function mapRows(rows){
+  const out=[];
+  for(const r of rows){
+    const name=pick(r,["ชื่อ","ชื่อ-สกุล","ชื่อสกุล","รายชื่อ"]);
+    if(!name||!String(name).trim()) continue;
+    out.push({
+      no:       toNum(pick(r,["ลำดับ","ที่"])),
+      name:     String(name).trim(),
+      startRaw: pick(r,["กู้เมื่อ","วันที่กู้","วันกู้"]),
+      periods:  toNum(pick(r,["จำนวนงวด","งวดที่","งวด"])),
+      amount:   toNum(pick(r,["ยอดเงิน","จำนวนกู้","ยอดกู้","วงเงิน"])),
+      perMonth: toNum(pick(r,["เงินต้น","หักงวดละ","งวดละ","ชำระงวดละ"])),
+      remain:   toNum(pick(r,["คงเหลือ","ยอดคงเหลือ","คงค้าง"]))
+    });
+  }
+  return out;
+}
+
+/* ===== คำนวณ ===== */
+function enrich(r){
+  const start=toDate(r.startRaw);
+  const amount=r.amount, per=r.perMonth;
+  let periods=r.periods;
+  if((periods==null||isNaN(periods)) && start){
+    const now=new Date();
+    periods=(now.getFullYear()-start.getFullYear())*12+(now.getMonth()-start.getMonth());
+    if(now.getDate()>=start.getDate()) periods+=1;
+    periods=Math.max(0,periods);
+  }
+  const totalPeriods = (amount&&per) ? Math.ceil(amount/per) : null;
+  let paid = (amount!=null&&r.remain!=null) ? amount-r.remain : (per&&periods!=null) ? per*periods : null;
+  let remain = r.remain!=null ? r.remain : (amount!=null&&paid!=null) ? amount-paid : null;
+  if(remain!=null&&remain<0) remain=0;
+  const leftPeriods = (remain!=null&&per) ? Math.ceil(remain/per) : null;
+  const endDate = (start&&totalPeriods) ? addMonths(start,totalPeriods) : null;
+  const nextDate = (start&&periods!=null&&remain>0) ? addMonths(start,periods+1) : null;
+  const pct = (amount&&paid!=null) ? Math.min(100,Math.max(0,paid/amount*100)) : 0;
+  const lastPay = (amount&&per&&totalPeriods) ? (amount-(totalPeriods-1)*per) : null;
+  return {...r,start,periods,totalPeriods,paid,remain,leftPeriods,endDate,nextDate,pct,lastPay};
+}
+
+function schedule(r){
+  if(!r.start||!r.totalPeriods||!r.perMonth) return [];
+  const rows=[]; let bal=r.amount;
+  for(let i=1;i<=r.totalPeriods;i++){
+    const pay=Math.min(r.perMonth,bal);
+    bal=Math.round((bal-pay)*100)/100;
+    rows.push({ i, date:addMonths(r.start,i), pay, bal, paid: i<=(r.periods||0) });
+  }
+  return rows;
+}
+
+/* ===== แสดงผล ===== */
+let DATA=[];
+
+function renderNames(){
+  const q=document.getElementById("search").value.trim().toLowerCase();
+  const el=document.getElementById("names");
+  const hint=document.getElementById("hint");
+
+  if(!q){                                   // ยังไม่พิมพ์ = ไม่แสดงอะไรเลย
+    hint.textContent="พิมพ์ชื่อของท่านเพื่อตรวจสอบยอดหนี้";
+    el.innerHTML="";
+    return;
+  }
+  const rows=DATA.filter(r=>(r.name||"").toLowerCase().includes(q));
+  if(!rows.length){
+    hint.textContent="";
+    el.innerHTML=`<div class="msg">ไม่พบชื่อที่ค้นหา</div>`;
+    return;
+  }
+  hint.textContent="แตะที่ชื่อเพื่อดูรายละเอียด";
+  el.innerHTML=rows.map(r=>`
+    <button class="nameitem" data-name="${esc(r.name)}">
+      <span class="t"><b>${esc(r.name)}</b></span>
+      <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`).join("");
+  el.querySelectorAll(".nameitem").forEach(b=>
+    b.addEventListener("click",()=>showDetail(b.dataset.name)));
+}
+
+function renderDetail(r){
+  const done=(r.remain||0)<=0;
+  const near=!done&&r.leftPeriods!=null&&r.leftPeriods<=3;
+  const badge=done?`<span class="badge done">ชำระครบแล้ว</span>`
+            :near?`<span class="badge near">เหลืออีก ${r.leftPeriods} งวด</span>`
+            :`<span class="badge">งวดที่ ${r.periods ?? "—"} / ${r.totalPeriods ?? "—"}</span>`;
+  const sch=schedule(r);
+  return `
+  <div class="card">
+    <div class="card-top">
+      <div class="who">
+        <div class="name">${esc(r.name)}</div>
+        <div class="sub">กู้เมื่อ ${fmtThai(r.start,true)}</div>
+      </div>${badge}
+    </div>
+    <div class="bar"><span class="${done?"done":""}" style="width:${r.pct.toFixed(1)}%"></span></div>
+    <div class="barinfo"><span>ชำระแล้ว ${r.pct.toFixed(0)}%</span>
+      <span class="num">${money(r.paid)} / ${money(r.amount)}</span></div>
+    <div class="grid">
+      <div class="cell big remain ${done?"zero":""}"><div class="k">ยอดคงเหลือ</div><div class="v num">${money(r.remain)}</div></div>
+      <div class="cell big"><div class="k">เหลืออีก</div><div class="v num">${done?"0":(r.leftPeriods ?? "—")} <small style="font-size:.72rem;color:var(--faint)">งวด</small></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <div class="cell"><div class="k">จำนวนเงินกู้</div><div class="v num">${money(r.amount)}</div></div>
+      <div class="cell"><div class="k">หักงวดละ</div><div class="v num">${money(r.perMonth)}</div></div>
+      <div class="cell"><div class="k">ชำระไปแล้ว</div><div class="v num">${money(r.paid)}</div></div>
+      <div class="cell"><div class="k">จำนวนงวดทั้งหมด</div><div class="v num">${r.totalPeriods ?? "—"}</div></div>
+      <div class="cell"><div class="k">${done?"ชำระครบเมื่อ":"หักงวดถัดไป"}</div><div class="v">${done?fmtThai(r.endDate):fmtThai(r.nextDate)}</div></div>
+      <div class="cell"><div class="k">ครบกำหนด</div><div class="v">${fmtThai(r.endDate)}</div></div>
+    </div>
+  </div>
+
+  ${sch.length?`
+  <div class="sect-title">ตารางการหักชำระ (${sch.length} งวด)</div>
+  <div class="card" style="padding:10px 12px">
+    <div class="tablewrap"><table>
+      <thead><tr><th>งวด</th><th>เดือน</th><th>หัก</th><th>คงเหลือ</th><th></th></tr></thead>
+      <tbody>${sch.map(s=>{
+        const isNext = !s.paid && s.i===(r.periods||0)+1;
+        return `<tr class="${s.paid?"paid":""} ${isNext?"next":""}">
+          <td class="num">${s.i}</td>
+          <td>${fmtShort(s.date)}</td>
+          <td class="num">${money(s.pay)}</td>
+          <td class="num">${money(s.bal)}</td>
+          <td>${s.paid?`<span class="tag">หักแล้ว</span>`:(isNext?"งวดถัดไป":"")}</td>
+        </tr>`;}).join("")}</tbody>
+    </table></div>
+  </div>`:""}
+
+  <div class="card" style="padding:12px 14px">
+    <div style="font-size:.78rem;color:var(--muted);line-height:1.6">
+      คำนวณจากข้อมูลในระบบ ณ วันที่ ${fmtThai(new Date(),true)} —
+      ยอดจริงอาจต่างเล็กน้อยหากมีการชำระพิเศษหรือปรับยอดระหว่างงวด
+    </div>
+  </div>`;
+}
+
+function showDetail(name){
+  const r=DATA.find(x=>x.name===name);
+  if(!r) return;
+  document.getElementById("viewDetail").innerHTML=renderDetail(r);
+  document.getElementById("viewSearch").classList.add("hidden");
+  document.getElementById("viewDetail").classList.remove("hidden");
+  document.getElementById("backBtn").classList.remove("hidden");
+  location.hash = "#" + encodeURIComponent(name);
+  window.scrollTo(0,0);
+}
+function showSearch(){
+  document.getElementById("viewDetail").classList.add("hidden");
+  document.getElementById("viewSearch").classList.remove("hidden");
+  document.getElementById("backBtn").classList.add("hidden");
+  if(location.hash) history.replaceState(null,"",location.pathname+location.search);
+  window.scrollTo(0,0);
+}
+
+function setStatus(kind,text,extra){
+  document.getElementById("dot").className="dot "+kind;
+  document.getElementById("statusText").textContent=text;
+  document.getElementById("notice").innerHTML=extra||"";
+}
+
+async function load(){
+  setStatus("","กำลังดึงข้อมูลจาก Google Sheet…");
+  try{
+    const res=await fetch(GVIZ+"&_="+Date.now(),{cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const rows=mapRows(parseGviz(await res.text()));
+    if(!rows.length) throw new Error("ไม่มีข้อมูล");
+    DATA=rows.map(enrich);
+    setStatus("live","ข้อมูลสด • "+new Date().toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}));
+  }catch(err){
+    DATA=SNAPSHOT.rows.map(enrich);
+    setStatus("cache","ใช้ข้อมูลสำรอง (ณ "+SNAPSHOT.at+")",
+      `<div class="notice"><b>ดึงข้อมูลสดไม่สำเร็จ</b> — ตรวจสอบว่าชีตตั้งค่าเป็น
+       “ทุกคนที่มีลิงก์ • ผู้อ่าน” และหน้านี้เปิดผ่าน https (GitHub Pages)</div>`);
+  }
+  renderNames();
+  const h=location.hash?decodeURIComponent(location.hash.slice(1)):"";
+  if(h && DATA.some(r=>r.name===h)) showDetail(h);
+}
+
+document.getElementById("search").addEventListener("input",renderNames);
+document.getElementById("reloadBtn").addEventListener("click",load);
+document.getElementById("backBtn").addEventListener("click",showSearch);
+window.addEventListener("hashchange",()=>{ if(!location.hash) showSearch(); });
+document.getElementById("themeBtn").addEventListener("click",()=>{
+  const cur=document.documentElement.getAttribute("data-theme");
+  const dark=cur?cur==="dark":matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme",dark?"light":"dark");
+  try{localStorage.setItem("loan-theme",dark?"light":"dark");}catch(e){}
+});
+try{ const t=localStorage.getItem("loan-theme"); if(t) document.documentElement.setAttribute("data-theme",t); }catch(e){}
+
+load();
+</script>
+</body>
+</html>
